@@ -1,0 +1,469 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "##### The University of Melbourne, School of Computing and Information Systems\n",
+    "# COMP30027 Machine Learning, 2022 Semester 1\n",
+    "\n",
+    "## Assignment 2: Sentiment Classification of Tweets\n",
+    "\n",
+    "This is a sample code to assist you with vectorising the 'Train' dataset for your assignment 2.\n",
+    "\n",
+    "First we read the CSV datafiles (Train and Test)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Importing relevant packages\n",
+    "import pandas as pd\n",
+    "import nltk\n",
+    "from nltk.corpus import stopwords\n",
+    "import re\n",
+    "import csv\n",
+    "import time\n",
+    "import numpy as np\n",
+    "\n",
+    "# Gather the relevant train/test data from the csv files.\n",
+    "train_data = pd.read_csv(\"Train.csv\", sep=',')\n",
+    "test_data = pd.read_csv(\"Test.csv\", sep=',')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Then we separate the tweet text and the label (sentiment). "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#separating instance and label for Train\n",
+    "X_train_raw = [x[0] for x in train_data[['text']].values]\n",
+    "Y_train = [x[0] for x in train_data[['sentiment']].values]\n",
+    "\n",
+    "#separating instance and label for Test\n",
+    "X_test_raw = [x[0] for x in test_data[['text']].values]\n",
+    "ID_test = [x[0] for x in test_data[['id']].values]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Set the stop words as a comparable list.\n",
+    "stop_words = set(stopwords.words(\"english\"))\n",
+    "\n",
+    "# Initialise two counters to step through each tweet in the dataset.\n",
+    "# Step through both train and test dataset.\n",
+    "count_train=0\n",
+    "count_test=0\n",
+    "\n",
+    "# Step through the training dataset and remove irrelevant features.\n",
+    "for i in X_train_raw:\n",
+    "    \n",
+    "    # Remove any URL\n",
+    "    i = re.sub(r'http\\S+', '', i)\n",
+    "    i = i.split(\" \")\n",
+    "    \n",
+    "    # Remove stop words.\n",
+    "    for w in i:\n",
+    "        if w in stop_words:\n",
+    "            i.remove(w)\n",
+    "    i = ' '.join(i)\n",
+    "    \n",
+    "    # Remove special characters and numbers\n",
+    "    i = re.sub(r\"[^a-zA-Z0-9 ]\", \" \", i)\n",
+    "    i = re.sub(r\"[0-9]\", \"\", i)\n",
+    "    i = i.split(\" \")\n",
+    "    \n",
+    "    # Remove the 'th' or 'nd' after the use of a number\n",
+    "    for w in i:\n",
+    "        if w == \"th\" or w == \"nd\":\n",
+    "            i.remove(w)\n",
+    "    i = ' '.join(i)\n",
+    "    \n",
+    "    # Save the modified feature set.\n",
+    "    X_train_raw[count_train] = i\n",
+    "    \n",
+    "    #Step through the raw feature set.\n",
+    "    count_train += 1\n",
+    "    \n",
+    "    \n",
+    "# Step through the testing dataset and remove irrelevant features.\n",
+    "for i in X_test_raw:\n",
+    "    # Remove any URL\n",
+    "    i = re.sub(r'http\\S+', '', i)\n",
+    "    i = i.split(\" \")\n",
+    "    \n",
+    "    # Remove stop words.\n",
+    "    for w in i:\n",
+    "        if w in stop_words:\n",
+    "            i.remove(w)\n",
+    "    i = ' '.join(i)\n",
+    "    \n",
+    "    # Remove special characters and numbers\n",
+    "    i = re.sub(r\"[^a-zA-Z0-9 ]\", \" \", i)\n",
+    "    i = re.sub(r\"[0-9]\", \"\", i)\n",
+    "    i = i.split(\" \")\n",
+    "    \n",
+    "    # Remove the 'th' or 'nd' after the use of a number\n",
+    "    for w in i:\n",
+    "        if w == \"th\" or w == \"nd\":\n",
+    "            i.remove(w)\n",
+    "    i = ' '.join(i)\n",
+    "    \n",
+    "    # Save the modified feature set.\n",
+    "    X_test_raw[count_test] = i\n",
+    "    \n",
+    "    #Step through the raw feature set.\n",
+    "    count_test += 1"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 1. Bag of Words (BoW)\n",
+    "In this approach, we use the **CountVectorizer** library to separate all the words in the Train corpus (dataset). These words are then used as the 'vectors' or 'features' to represent each instance (Tweet) in `Train` and `Test` datasets. "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Import Word Vectorizer\n",
+    "from sklearn.feature_extraction.text import CountVectorizer\n",
+    "\n",
+    "BoW_vectorizer = CountVectorizer()\n",
+    "\n",
+    "#Build the feature set (vocabulary) and vectorise the Tarin dataset using BoW\n",
+    "X_train_BoW = BoW_vectorizer.fit_transform(X_train_raw)\n",
+    "\n",
+    "#Use the feature set (vocabulary) from Train to vectorise the Test dataset \n",
+    "X_test_BoW = BoW_vectorizer.transform(X_test_raw)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Now each row is a list of tuples with the vector_id (word_id in the vocabulary) and the number of times it repeated in that given instance (tweet)."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We can save the created vocabulary for the given dataset in a separate file."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Store the output from the BoW vectorization.\n",
+    "output_dict = BoW_vectorizer.vocabulary_\n",
+    "output_pd = pd.DataFrame(list(output_dict.items()),columns = ['word','count'])\n",
+    "output_pd.T.to_csv('BoW-vocab.csv',index=False)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 2. TFIDF\n",
+    "In this approach, we use the **TfidfVectorizer** library to separate all the words in this corpus (dataset). Same as the BoW approach, these words are then used as the 'vectors' or 'features' to represent each instance (Tweet).\n",
+    "\n",
+    "However, in this method for each instance the value associated with each 'vector' (word) is not the number of times the word repeated in that tweet, but the TFIDF value of then 'voctor' (word)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Import the Tfidf Vectorizer\n",
+    "from sklearn.feature_extraction.text import TfidfVectorizer\n",
+    "\n",
+    "tfidf_vectorizer = TfidfVectorizer()\n",
+    "\n",
+    "#Build the feature set (vocabulary) and vectorise the Tarin dataset using TFIDF\n",
+    "X_train_tfidf = tfidf_vectorizer.fit_transform(X_train_raw)\n",
+    "\n",
+    "#Use the feature set (vocabulary) from Train to vectorise the Test dataset \n",
+    "X_test_tfidf = tfidf_vectorizer.transform(X_test_raw)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\n",
+      "========= MNB =========\n",
+      "9.268768072128296\n",
+      "['neutral' 'neutral' 'neutral' ... 'neutral' 'neutral' 'negative']\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Import packages relevant to the ML classification models\n",
+    "from sklearn.naive_bayes import MultinomialNB\n",
+    "from sklearn.svm import LinearSVC\n",
+    "from sklearn.dummy import DummyClassifier\n",
+    "from sklearn.feature_selection import mutual_info_classif\n",
+    "from sklearn.feature_selection import SelectKBest, chi2\n",
+    "\n",
+    "# Set out which classication method will be tested.\n",
+    "models = [DummyClassifier(strategy='most_frequent')]\n",
+    "titles = ['0-R']\n",
+    "\n",
+    "# Set out chi-squared feature selection\n",
+    "x2 = SelectKBest(chi2, k=2800)\n",
+    "x2.fit(X_train_BoW,Y_train)\n",
+    "X_train_x2 = x2.transform(X_train_BoW)\n",
+    "X_test_x2 = x2.transform(X_test_BoW)\n",
+    "\n",
+    "# Create and structure the file to store the predictions.\n",
+    "f_out = open(\"Test-Predictions-Dummy.csv\", 'w')\n",
+    "f_writer = csv.writer(f_out, delimiter=',', quotechar='\"', quoting=csv.QUOTE_MINIMAL)\n",
+    "f_writer.writerow(['id', 'sentiment'])\n",
+    "\n",
+    "# Generate the predictions based on the given model.\n",
+    "# Determine the time taken to run each model.\n",
+    "for title, model in zip(titles, models):\n",
+    "    print('\\n========= ', title, ' =========')\n",
+    "    \n",
+    "    start = time.time()\n",
+    "    \n",
+    "    model.fit(X_train_BoW.todense(), Y_train)\n",
+    "    y_test_predict = model.predict(X_test_BoW.todense())\n",
+    "    \n",
+    "    end = time.time()\n",
+    "    t = end - start\n",
+    "    \n",
+    "# Record all the results in the file.\n",
+    "for i in range(len(y_test_predict)):\n",
+    "    f_writer.writerow([ID_test[i], y_test_predict[i]])\n",
+    "\n",
+    "f_out.close()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 33,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "\n",
+      "=========  MNB  =========\n",
+      "['negative' 'neutral' 'neutral' ... 'neutral' 'neutral' 'negative']\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Set out which classication method will be tested.\n",
+    "models = [MultinomialNB()]\n",
+    "titles = ['MNB']\n",
+    "\n",
+    "# Create and structure the file to store the predictions.\n",
+    "f_out = open(\"Test-Predictions-MNB.csv\", 'w')\n",
+    "\n",
+    "f_writer = csv.writer(f_out, delimiter=',', quotechar='\"', quoting=csv.QUOTE_MINIMAL)\n",
+    "\n",
+    "f_writer.writerow(['id', 'sentiment'])\n",
+    "\n",
+    "# Set out chi-squared feature selection\n",
+    "x2 = SelectKBest(chi2, k=2800)\n",
+    "x2.fit(X_train_BoW,Y_train)\n",
+    "X_train_x2 = x2.transform(X_train_BoW)\n",
+    "X_test_x2 = x2.transform(X_test_BoW)\n",
+    "\n",
+    "# Generate the predictions based on the given model.\n",
+    "# Determine the time taken to run each model.\n",
+    "for title, model in zip(titles, models):\n",
+    "    print('\\n========= ', title, ' =========')\n",
+    "    \n",
+    "    start = time.time()\n",
+    "    \n",
+    "    model.fit(X_train_x2.todense(), Y_train)\n",
+    "    y_test_predict = model.predict(X_test_x2.todense())\n",
+    "    \n",
+    "    end = time.time()\n",
+    "    t = end - start\n",
+    "\n",
+    "# Record all the results in the file.\n",
+    "for i in range(len(y_test_predict)):\n",
+    "    f_writer.writerow([ID_test[i], y_test_predict[i]])\n",
+    "    \n",
+    "f_out.close()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Set out which classication method will be tested.\n",
+    "models = [svm.LinearSVC()]\n",
+    "titles = ['SVM']\n",
+    "\n",
+    "# Create and structure the file to store the predictions.\n",
+    "f_out = open(\"Test-Predictions-SVM.csv\", 'w')\n",
+    "\n",
+    "f_writer = csv.writer(f_out, delimiter=',', quotechar='\"', quoting=csv.QUOTE_MINIMAL)\n",
+    "\n",
+    "f_writer.writerow(['id', 'sentiment'])\n",
+    "\n",
+    "# Set out chi-squared feature selection\n",
+    "x2 = SelectKBest(chi2, k=2800)\n",
+    "x2.fit(X_train_BoW,Y_train)\n",
+    "X_train_x2 = x2.transform(X_train_tfidf)\n",
+    "X_test_x2 = x2.transform(X_test_tfidf)\n",
+    "\n",
+    "# Generate the predictions based on the given model.\n",
+    "# Determine the time taken to run each model.\n",
+    "for title, model in zip(titles, models):\n",
+    "    print('\\n========= ', title, ' =========')\n",
+    "    \n",
+    "    start = time.time()\n",
+    "    \n",
+    "    model.fit(X_train_x2.todense(), Y_train)\n",
+    "    y_test_predict = model.predict(X_test_x2.todense())\n",
+    "    \n",
+    "    end = time.time()\n",
+    "    t = end - start\n",
+    "\n",
+    "# Record all the results in the file.\n",
+    "for i in range(len(y_test_predict)):\n",
+    "    f_writer.writerow([ID_test[i], y_test_predict[i]])\n",
+    "    \n",
+    "f_out.close()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 50,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "0.5806348194793232\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Import package to complete cross-validation evaluation.\n",
+    "from sklearn.model_selection import cross_val_score\n",
+    "\n",
+    "# Complete cross-validation on the 0-R model.\n",
+    "models = [DummyClassifier(strategy='most_frequent')]\n",
+    "titles = ['0-R']\n",
+    "\n",
+    "# Evaluate the train data across 10 iterations.\n",
+    "for title, model in zip(titles, models):\n",
+    "    acc = np.mean(cross_val_score(model, X_train_raw, Y_train, cv=10))\n",
+    "\n",
+    "print(acc)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 47,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "0.6246669947713575\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Complete cross-validation on the MNB model.\n",
+    "models = [MultinomialNB()]\n",
+    "titles = ['MNB']\n",
+    "\n",
+    "# Evaluate the train data across 10 iterations.\n",
+    "for title, model in zip(titles, models):\n",
+    "    acc = np.mean(cross_val_score(model, X_train_BoW, Y_train, cv=10))\n",
+    "\n",
+    "print(acc)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 48,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "0.6200800070668703\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Complete cross-validation on the SVM model.\n",
+    "models = [svm.LinearSVC()]\n",
+    "titles = ['SVM']\n",
+    "\n",
+    "# Evaluate the train data across 10 iterations.\n",
+    "for title, model in zip(titles, models):\n",
+    "    acc = np.mean(cross_val_score(model, X_train_BoW, Y_train, cv=10))\n",
+    "\n",
+    "print(acc)"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.9.7"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}
